@@ -3,11 +3,12 @@ from scipy.stats import norm
 from scipy.special import erf
 
 #Integral of a normal distribution from -x to x
-weights = lambda x:erf(x/np.sqrt(2))
+truncated_integral = lambda x:erf(x/np.sqrt(2))
 #Standard deviation of a truncated normal distribution from -x to x
-sigmas = lambda x:np.sqrt(1-2*x*norm.pdf(x)/weights(x))
+truncated_sigma = lambda x:np.sqrt(1-2*x*norm.pdf(x)/truncated_integral(x))
 
-def robust_gaussian_fit(X, mu = None, sigma = None, bandwidth = 1.0, eps = 1.0e-5):
+def robust_gaussian_fit(X, mu = None, sigma = None, bandwidth = 1.0, eps = 1.0e-5, weights = None):
+
     """
     Fits a single principal gaussian component around a starting guess point
     in a 1-dimensional gaussian mixture of unknown components with EM algorithm
@@ -24,7 +25,11 @@ def robust_gaussian_fit(X, mu = None, sigma = None, bandwidth = 1.0, eps = 1.0e-
     """
 
     w,w0=0,2
-    
+    if weights is None:
+        weights = np.ones(X.shape)
+    else :
+        if weights.shape != X.shape :
+            raise "weights and values must have the same shape"
     if mu is None:
         #median is an approach as robust and naïve as possible to Expectation
         mu = np.median(X)
@@ -33,8 +38,8 @@ def robust_gaussian_fit(X, mu = None, sigma = None, bandwidth = 1.0, eps = 1.0e-
         #rule of thumb
         sigma = np.std(X)/3
         
-    bandwidth_truncated_normal_weight = weights(bandwidth)
-    bandwidth_truncated_normal_sigma = sigmas(bandwidth)
+    bandwidth_truncated_normal_weight = truncated_integral(bandwidth)
+    bandwidth_truncated_normal_sigma = truncated_sigma(bandwidth)
     
     while abs(w - w0) > eps:
         #loop until tolerence is reached
@@ -46,10 +51,11 @@ def robust_gaussian_fit(X, mu = None, sigma = None, bandwidth = 1.0, eps = 1.0e-
             measure the proportion of points inside the window, divide by the weight of a truncated gaussian distribution
             """
             W = np.where(np.logical_and(X - mu - bandwidth * sigma < 0 , X - mu + bandwidth * sigma > 0), 1, 0)
-            mu = np.mean(X[W == 1])
-            sigma = np.std(X[W == 1])/bandwidth_truncated_normal_sigma
+            mu = np.average(X[W == 1], weights = weights[W == 1])
+            var = np.average(np.square(X[W == 1]), weights = weights[W == 1]) - mu**2
+            sigma = np.sqrt(var)/bandwidth_truncated_normal_sigma
             w0 = w
-            w = np.mean(W)/bandwidth_truncated_normal_weight
+            w = np.average(W, weights = weights)/bandwidth_truncated_normal_weight
         
         except:
             break
