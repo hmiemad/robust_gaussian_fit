@@ -1,9 +1,8 @@
 import numpy as np
 from scipy.stats import norm
-from scipy.special import erf
 
 #Integral of a normal distribution from -x to x
-truncated_integral = lambda x:erf(x/np.sqrt(2))
+truncated_integral = lambda x : 2*norm.cdf(x)-1
 #Standard deviation of a truncated normal distribution from -x to x
 truncated_sigma = lambda x:np.sqrt(1-2*x*norm.pdf(x)/truncated_integral(x))
 
