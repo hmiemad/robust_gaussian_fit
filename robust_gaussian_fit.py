@@ -1,15 +1,16 @@
 import numpy as np
 
-def normal_erf(x, depth = 50):
+def normal_erf(x, mu = 0, sigma = 1,  depth = 50):
     ele = 1.0
     normal = 1.0
+    x = (x - mu)/sigma
     erf = x
     for i in range(1,depth):
         ele = - ele * x * x/2.0/i
         normal = normal + ele
         erf = erf + ele * x / (2.0 * i + 1)
 
-    return normal/np.sqrt(2.0*np.pi) , erf/np.sqrt(2.0*np.pi)
+    return np.clip(normal/np.sqrt(2.0*np.pi)/sigma,0,None) , np.clip(erf/np.sqrt(2.0*np.pi)/sigma,-0.5,0.5)
 
 def truncated_intergral_and_sigma(x):
     n,e = normal_erf(x)
@@ -68,4 +69,3 @@ def robust_gaussian_fit(X, mu = None, sigma = None, bandwidth = 1.0, eps = 1.0e-
         w = np.average(W, weights = weights)/bandwidth_truncated_normal_weight
 
     return w,mu,sigma
-
