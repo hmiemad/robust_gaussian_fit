@@ -33,26 +33,27 @@ def robust_gaussian_fit(X, mu = None, sigma = None, bandwidth = 1.0, eps = 1.0e-
     Returns:
         w,mu,sigma: weight, mean and stdev of the gaussian component
     """
-
-    w,w0=0,2
     
     if weights is None:
         weights = np.ones(X.shape)
     else :
         if weights.shape != X.shape :
             raise "weights and values must have the same shape"
+            
     if mu is None:
         #median is an approach as robust and naïve as possible to Expectation
         mu = np.median(X)
+    mu_0 = mu + 1
     
     if sigma is None:
         #rule of thumb
         sigma = np.std(X)/3
-        
+    sigma_0 = sigma + 1
+    
     bandwidth_truncated_normal_weight, bandwidth_truncated_normal_sigma = truncated_intergral_and_sigma(bandwidth)
 
     
-    while abs(w - w0) > eps:
+    while abs(mu - mu_0) + abs(sigma - sigma_0) > eps:
         #loop until tolerence is reached
 
         """
@@ -61,11 +62,11 @@ def robust_gaussian_fit(X, mu = None, sigma = None, bandwidth = 1.0, eps = 1.0e-
         measure the standard deviation of the window and divide by the standard deviation of a truncated gaussian distribution
         measure the proportion of points inside the window, divide by the weight of a truncated gaussian distribution
         """
-        W = np.where(np.logical_and(X - mu - bandwidth * sigma < 0 , X - mu + bandwidth * sigma > 0), 1, 0)
-        mu = np.average(X[W == 1], weights = weights[W == 1])
-        var = np.average(np.square(X[W == 1]), weights = weights[W == 1]) - mu**2
-        sigma = np.sqrt(var)/bandwidth_truncated_normal_sigma
-        w0 = w
-        w = np.average(W, weights = weights)/bandwidth_truncated_normal_weight
+        Window = np.logical_and(X - mu - bandwidth * sigma < 0 , X - mu + bandwidth * sigma > 0)
+        mu_0, mu = mu, np.average(X[Window], weights = weights[Window])
+        var = np.average(np.square(X[Window]), weights = weights[Window]) - mu**2
+        sigma_0 , sigma = sigma, np.sqrt(var)/bandwidth_truncated_normal_sigma
+
+    w = np.average(W, weights = weights)/bandwidth_truncated_normal_weight
 
     return w,mu,sigma
