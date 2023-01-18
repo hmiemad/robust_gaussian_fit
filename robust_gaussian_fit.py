@@ -33,12 +33,6 @@ def robust_gaussian_fit(X, mu = None, sigma = None, bandwidth = 1.0, eps = 1.0e-
     Returns:
         w,mu,sigma: weight, mean and stdev of the gaussian component
     """
-    
-    if weights is None:
-        weights = np.ones(X.shape)
-    else :
-        if weights.shape != X.shape :
-            raise "weights and values must have the same shape"
             
     if mu is None:
         #median is an approach as robust and naïve as possible to Expectation
@@ -63,10 +57,14 @@ def robust_gaussian_fit(X, mu = None, sigma = None, bandwidth = 1.0, eps = 1.0e-
         measure the proportion of points inside the window, divide by the weight of a truncated gaussian distribution
         """
         Window = np.logical_and(X - mu - bandwidth * sigma < 0 , X - mu + bandwidth * sigma > 0)
-        mu_0, mu = mu, np.average(X[Window], weights = weights[Window])
-        var = np.average(np.square(X[Window]), weights = weights[Window]) - mu**2
+        if weights is None : 
+            Window_weights = None
+        else :
+            Window_weights = weights[Window]
+        mu_0, mu = mu, np.average(X[Window], weights = Window_weights)
+        var = np.average(np.square(X[Window]), weights = Window_weights) - mu**2
         sigma_0 , sigma = sigma, np.sqrt(var)/bandwidth_truncated_normal_sigma
 
-    w = np.average(W, weights = weights)/bandwidth_truncated_normal_weight
+    w = np.average(Window, weights = weights)/bandwidth_truncated_normal_weight
 
     return w,mu,sigma
